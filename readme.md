@@ -18,6 +18,7 @@ Base article used as source:
 - [04 - First Login and License](./04-first-login-and-license.md)
 - [05 - Troubleshooting and Maintenance](./05-troubleshooting-and-maintenance.md)
 - [06 - Optional: Route n8n Traffic Through VLESS Reality VPN (Xray)](./06-optional-n8n-through-vpn-xray.md)
+- [07 - n8n Workflow Examples](./07-n8n-workflow-examples.md)
 
 ## Quick Start
 

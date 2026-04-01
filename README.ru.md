@@ -14,6 +14,7 @@
 - [04 - Первый вход и лицензия](./04-first-login-and-license.ru.md)
 - [05 - Диагностика и обслуживание](./05-troubleshooting-and-maintenance.ru.md)
 - [06 - Опционально: трафик n8n через VPN VLESS Reality (Xray)](./06-optional-n8n-through-vpn-xray.ru.md)
+- [07 - Примеры n8n workflow](./07-n8n-workflow-examples.ru.md)
 
 ## Быстрый старт
 
