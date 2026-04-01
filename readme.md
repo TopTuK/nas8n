@@ -17,13 +17,15 @@ Base article used as source:
 - [03 - Docker Stack Deployment (Portainer)](./03-docker-stack-deployment-portainer.md)
 - [04 - First Login and License](./04-first-login-and-license.md)
 - [05 - Troubleshooting and Maintenance](./05-troubleshooting-and-maintenance.md)
+- [06 - Optional: Route n8n Traffic Through VLESS Reality VPN (Xray)](./06-optional-n8n-through-vpn-xray.md)
 
 ## Quick Start
 
 1. Complete Synology setup and folders from `02`.
 2. Deploy the stack from `03` (edit secrets and host values first).
 3. Open your HTTPS URL and complete onboarding in `04`.
-4. Use `05` for operations and troubleshooting.
+4. Optional: if you need all n8n outbound traffic over VPN, apply `06`.
+5. Use `05` for operations and troubleshooting.
 
 ## Notes
 

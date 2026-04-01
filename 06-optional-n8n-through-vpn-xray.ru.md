@@ -1,0 +1,140 @@
+# Опционально: трафик n8n через VPN VLESS Reality (Xray)
+
+Используйте эту инструкцию, если хотите направить весь исходящий трафик `n8n` через контейнер VPN-клиента (`xray`), сохранив вход через Synology Reverse Proxy.
+
+## 1) Подготовьте папки
+
+Создайте папки на Synology (пример):
+
+- `/volume1/docker/vpnconfig/xray`
+- `/volume1/docker/n8n/db`
+- `/volume1/docker/n8n/data`
+- `/volume1/docker/n8n/files`
+
+Файл конфигурации Xray:
+
+- `/volume1/docker/vpnconfig/xray/config.json`
+
+## 2) Создайте один stack в Portainer
+
+В Portainer:
+
+- `Home -> Live connect` (если нужно)
+- `Stacks -> + Add stack`
+- **Name**: `n8n-vpn`
+
+Используйте следующий compose-файл:
+
+```yaml
+services:
+  xray:
+    image: teddysun/xray:latest
+    container_name: xray-vpn
+    hostname: xray-vpn
+    security_opt:
+      - no-new-privileges:true
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "127.0.0.1:5678:5678"
+    volumes:
+      - /volume1/docker/vpnconfig/xray/config.json:/etc/xray/config.json:ro
+    command: ["xray", "-config", "/etc/xray/config.json"]
+    restart: on-failure:5
+
+  db:
+    image: postgres:18
+    container_name: n8n-DB
+    hostname: n8n-db
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "n8n", "-U", "n8nuser"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+    volumes:
+      - /volume1/docker/n8n/db:/var/lib/postgresql:rw
+    environment:
+      TZ: Europe/YourCity
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8nuser
+      POSTGRES_PASSWORD: CHANGE_ME_DB_PASSWORD
+    restart: on-failure:5
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    user: 0:0
+    network_mode: "service:xray"
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5678 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    volumes:
+      - /volume1/docker/n8n/data:/root/.n8n:rw
+      - /volume1/docker/n8n/files:/files:rw
+    environment:
+      N8N_HOST: n8n.example.com
+      WEBHOOK_URL: https://n8n.example.com
+      N8N_EDITOR_BASE_URL: https://n8n.example.com
+      GENERIC_TIMEZONE: Europe/YourCity
+      TZ: Europe/YourCity
+      N8N_PORT: 5678
+      N8N_PROXY_HOPS: 4
+      N8N_ENCRYPTION_KEY: CHANGE_ME_64_CHAR_RANDOM_KEY
+      N8N_PROTOCOL: https
+      NODE_ENV: production
+      N8N_DIAGNOSTICS_ENABLED: false
+      N8N_RUNNERS_ENABLED: true
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: true
+      N8N_RESTRICT_FILE_ACCESS_TO: /files
+      N8N_SECURE_COOKIE: true
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_HOST: n8n-db
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_USER: n8nuser
+      DB_POSTGRESDB_PASSWORD: CHANGE_ME_DB_PASSWORD
+    restart: on-failure:5
+    depends_on:
+      db:
+        condition: service_healthy
+      xray:
+        condition: service_started
+```
+
+## 3) Перед деплоем замените значения-заглушки
+
+- `Europe/YourCity` -> ваш часовой пояс
+- `n8n.example.com` -> ваш публичный домен n8n
+- `CHANGE_ME_DB_PASSWORD` -> сложный пароль БД
+- `CHANGE_ME_64_CHAR_RANDOM_KEY` -> уникальный случайный ключ длиной 64 символа
+
+## 4) Цель Reverse Proxy
+
+Оставьте destination в Synology Reverse Proxy:
+
+- `http://127.0.0.1:5678`
+
+Порт `5678` не должен публиковаться на сервисе `n8n`; его публикует `xray`.
+
+## 5) Проверка выхода через VPN
+
+После деплоя в консоли контейнера `n8n` выполните:
+
+```sh
+curl -s https://api.ipify.org
+```
+
+Ожидаемый результат: IP VPN-выхода, а не публичный IP вашего NAS.
+
+## 6) Частые ошибки
+
+- При `network_mode: "container:..."` или `network_mode: "service:..."` не задавайте `hostname` для `n8n`.
+- Используйте один stack, чтобы не получить проблемы с DNS/сетью между stack'ами.
+- Не публикуйте в документации реальные VPN URL, UUID, private key, public key, short ID, домены и IP-адреса.
